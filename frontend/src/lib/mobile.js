@@ -66,3 +66,40 @@ export async function shareExport(json, filename) {
   const w = await Filesystem.writeFile({ path: filename, directory: Directory.Cache, data: json, encoding: Encoding.UTF8 })
   await Share.share({ title: filename, url: w.uri })
 }
+
+// Exercise animations stay on the CDN (~123 MB for the whole library), but each one is kept in
+// the app's data directory the first time it plays, so the exercises you actually train show
+// offline from then on. Resolves to a local file URL when kept, else to the remote one — and
+// starts keeping it in the background. Any failure just leaves the remote URL in place.
+const gifKept = new Map()
+export async function cachedGif(url, name) {
+  if (gifKept.has(name)) return gifKept.get(name)
+  const path = 'gif/' + name
+  try {
+    const { Filesystem, Directory } = await import('@capacitor/filesystem')
+    const { Capacitor } = await import('@capacitor/core')
+    try {
+      const { uri } = await Filesystem.getUri({ path, directory: Directory.Data })
+      await Filesystem.stat({ path, directory: Directory.Data })
+      const local = Capacitor.convertFileSrc(uri)
+      gifKept.set(name, local)
+      return local
+    } catch (e) { /* not kept yet */ }
+    keepGif(url, path, Filesystem, Directory)
+  } catch (e) { /* no filesystem: stay remote */ }
+  return url
+}
+async function keepGif(url, path, Filesystem, Directory) {
+  try {
+    const res = await fetch(url)
+    if (!res.ok) return
+    const blob = await res.blob()
+    const data = await new Promise((ok, fail) => {
+      const r = new FileReader()
+      r.onload = () => ok(String(r.result).split(',')[1])
+      r.onerror = fail
+      r.readAsDataURL(blob)
+    })
+    await Filesystem.writeFile({ path, directory: Directory.Data, data, recursive: true })
+  } catch (e) { /* offline or full: try again next time it plays */ }
+}

@@ -14,14 +14,14 @@ import {
   useCoachStatus, requestReview, resolvePending, forgetCoach, disclosure, JOB_ERRORS
 } from '../lib/coach-api.js'
 import { confirmSheet } from '../sheets.jsx'
+import { GOALS } from './CoachIntake.jsx'
 import Icon from '../components/Icon.jsx'
-import { Section, Row, Button, TextArea, Switch, SelectRow } from '../components/ui.jsx'
+import { Section, Row, Button, TextArea, TextField, Switch, SelectRow } from '../components/ui.jsx'
 
 /* The Coach's home: what it's doing, what it's proposing, what it has done before, and every
    switch that turns it off. Deliberately one screen — a feature that edits your training plan
    should not scatter its controls, least of all the ones that stop it. */
 
-const GOALS = ['strength', 'muscle', 'general fitness', 'fat loss', 'endurance']
 
 // Rendered from the same list the server builds payloads from (GET /api/coach/disclosure),
 // so the promise on screen cannot drift from what actually leaves the box.
@@ -42,7 +42,7 @@ export default function Coach() {
   const toast = useUI(s => s.toast)
   const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
-  const { job, pending, cap, refresh } = useCoachStatus(true)
+  const { job, pending, cap, lastError, refresh } = useCoachStatus(true)
 
   // Gating lives in one predicate; if the instance isn't offering the Coach this route simply
   // isn't a place you can be.
@@ -95,10 +95,15 @@ export default function Coach() {
       </div>
     </div>
 
+    {MOBILE && <GeminiCard />}
+
     {!consented
       ? <ConsentCard onDone={() => refresh()} />
       : <>
         <StatusCard job={job} pending={pending} nav={nav} />
+        {MOBILE && lastError && !job && !pending && <div className="dim small" style={{ margin: '-6px 4px 14px', color: 'var(--red)' }}>
+          {t('Last attempt failed:')} {lastError.detail || lastError.errorClass}
+        </div>}
 
         {!job && !pending && <div className="card">
           <h2 style={{ margin: '0 0 6px' }}>{t('Ask for a review')}</h2>
@@ -119,7 +124,7 @@ export default function Coach() {
           <Button variant="primary" icon="sparkles" onClick={() => nav('/coach/intake')}>{t('Let the Coach build my plan')}</Button>
         </div>}
 
-        <CadenceCard coach={coach} update={update} />
+        {!MOBILE && <CadenceCard coach={coach} update={update} />}
 
         <Section title={t('Coach profile')} footer={t('Used by every proposal — keep limitations here up to date.')}>
           <Row icon="clipboard" iconTint="var(--indigo)" title={t('Your answers')}
@@ -138,7 +143,7 @@ export default function Coach() {
 }
 
 const summarise = p => [
-  p.goal && t(p.goal),
+  p.goal && t((GOALS.find(([id]) => id === p.goal) || [p.goal, p.goal])[1]),
   p.daysPerWeek && t('{0} days a week', p.daysPerWeek),
   p.sessionMin && t('{0} min', p.sessionMin)
 ].filter(Boolean).join(' · ')
@@ -162,8 +167,10 @@ function ConsentCard({ onDone }) {
   const open = () => openSheet(close => <>
     <h3>{t('Before the Coach starts')}</h3>
     <div className="muted small" style={{ lineHeight: 1.5, marginBottom: 12 }}>
-      {t('When you ask for a plan or a review, this instance sends the following to {0}, running on this server under the instance owner’s account.',
-        info?.providerLabel || config?.coach?.providerLabel || t('the configured AI provider'))}
+      {MOBILE
+        ? t('When you ask for a plan or a review, this phone sends the following to Google Gemini, using your own API key.')
+        : t('When you ask for a plan or a review, this instance sends the following to {0}, running on this server under the instance owner’s account.',
+          info?.providerLabel || config?.coach?.providerLabel || t('the configured AI provider'))}
     </div>
     <div className="sect-b">
       {(info?.categories || Object.keys(CATEGORY_TEXT)).map(k => {
@@ -192,10 +199,47 @@ function ConsentCard({ onDone }) {
       <div className="big" style={{ fontSize: 20 }}>{t('Meet the Coach')}</div>
     </div>
     <div className="muted small" style={{ marginBottom: 12, lineHeight: 1.5 }}>
-      {t('An AI coach that can design your plan and adjust it from what you actually log. It runs on this server, it never changes anything without your say-so, and it is off until you turn it on.')}
+      {MOBILE
+        ? t('An AI coach that can design your plan and adjust it from what you actually log. It uses Google Gemini with your own API key, it never changes anything without your say-so, and it is off until you turn it on.')
+        : t('An AI coach that can design your plan and adjust it from what you actually log. It runs on this server, it never changes anything without your say-so, and it is off until you turn it on.')}
     </div>
     <Button variant="primary" icon="sparkles" onClick={open}>{t('See what it would use')}</Button>
   </div>
+}
+
+/* ---------------------------------- gemini (mobile) ---------------------------------- */
+
+// The phone's Coach runs on the owner's own Gemini key. It lives in app storage beside the
+// Coach (lib/coach-gemini.js), never in the training state, so exports and shares leave it out.
+function GeminiCard() {
+  const toast = useUI(s => s.toast)
+  const [mod, setMod] = useState(null)
+  const [key, setKey] = useState('')
+  const [model, setModel] = useState('')
+  const [saved, setSaved] = useState(false)
+  useEffect(() => {
+    import('../lib/coach-gemini.js').then(m => {
+      const g = m.geminiSettings()
+      setMod(m); setKey(g.key); setModel(g.model); setSaved(!!g.key)
+    })
+  }, [])
+  if (!mod) return null
+
+  const save = () => {
+    mod.saveGeminiSettings({ key, model })
+    setSaved(!!key.trim())
+    toast(key.trim() ? t('Gemini key saved on this phone') : t('Gemini key removed'))
+  }
+
+  return <Section title={t('Gemini')} footer={t('Create a key at aistudio.google.com. It is stored only on this phone.')}>
+    <div style={{ padding: '12px 14px', display: 'grid', gap: 8 }}>
+      <TextField type="password" autoComplete="off" value={key} onChange={e => { setKey(e.target.value); setSaved(false) }}
+        placeholder={t('Gemini API key')} />
+      <TextField autoComplete="off" autoCapitalize="off" value={model} onChange={e => { setModel(e.target.value); setSaved(false) }}
+        placeholder={mod.DEFAULT_MODEL} />
+      <Button variant={saved ? 'plain' : 'primary'} disabled={saved} onClick={save}>{saved ? t('Saved') : t('Save')}</Button>
+    </div>
+  </Section>
 }
 
 /* ---------------------------------- status ---------------------------------- */
