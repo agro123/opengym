@@ -17,6 +17,17 @@ export function modeOf(cfg) {
 }
 export const isTimed = cfg => modeOf(cfg) === 'time'
 
+// The two numbers a set row edits, per logging mode: field, step, whether it takes decimals,
+// and the (untranslated) column heading. Shared by the workout screen and the mobile
+// notification controls, so a tap on either moves the same amount.
+export function setCols(mode) {
+  if (mode === 'cardio') return [{ f: 'min', step: 1, dec: false, hd: 'Duration (min)' }, { f: 'speed', step: 0.5, dec: true, hd: 'Speed (km/h)' }]
+  if (mode === 'time') return [{ f: 'sec', step: 5, dec: false, hd: 'Seconds' }, { f: 'w', step: 2.5, dec: true, hd: 'Weight ({0})' }]
+  return [{ f: 'w', step: 2.5, dec: true, hd: 'Weight ({0})' }, { f: 'r', step: 1, dec: false, hd: 'Reps' }]
+}
+// One tap on a stepper: up from 0 with no ceiling.
+export const stepField = (v, step, dir) => Math.max(0, Math.round(((v || 0) + dir * step) * 100) / 100)
+
 // mm:ss for a work duration — seconds alone read badly past a minute ("90 s" vs "1:30").
 export function fmtSec(sec) {
   const n = Math.max(0, Math.round(Number(sec) || 0))

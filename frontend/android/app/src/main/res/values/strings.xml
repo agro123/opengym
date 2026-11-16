@@ -4,4 +4,5 @@
     <string name="title_activity_main">openGym</string>
     <string name="package_name">ch.duartesantos.opengym</string>
     <string name="custom_url_scheme">ch.duartesantos.opengym</string>
+    <string name="workout_channel">Workout in progress</string>
 </resources>

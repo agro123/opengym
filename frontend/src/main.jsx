@@ -8,6 +8,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode><App /></StrictMode>
 )
 
+// Mobile build: the running workout doubles as an ongoing notification with controls.
+if (MOBILE) import('./lib/workout-notif.js').then(m => m.initWorkoutNotif())
+
 // Not in the mobile build: the native shell already serves everything from disk.
 if (!MOBILE && 'serviceWorker' in navigator && location.protocol === 'https:') {
   navigator.serviceWorker.register('sw.js').catch(() => {})

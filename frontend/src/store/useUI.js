@@ -69,6 +69,9 @@ export const useUI = create((set, get) => ({
     set({ timer: { ...tm, left, total: tm.total + sec, endsAt: tm.endsAt + sec * 1000 } })
     pushRestTimer(left)
   },
+  // The mobile notification's own countdown reached zero. WebView timers are throttled while
+  // the app is in the background, so don't wait for the next interval to notice.
+  pokeRest() { if (timerTick) timerTick() },
   stopRest() {
     if (timerInt) clearInterval(timerInt); timerInt = null
     if (timerTick) document.removeEventListener('visibilitychange', timerTick); timerTick = null

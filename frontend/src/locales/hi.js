@@ -741,4 +741,6 @@ export default {
   'New to lifting': 'वेट ट्रेनिंग में नया',
   'Coming back after a break': 'ब्रेक के बाद वापसी',
   'Training regularly': 'नियमित रूप से ट्रेनिंग',
+  // workout notification (mobile): position inside the exercise, e.g. "Set 2/4"
+  'Set {0}': 'सेट {0}',
 }

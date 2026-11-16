@@ -787,6 +787,39 @@ export function beginWorkout(routineId, bw) {
   useUI.getState().stopRest()
   nav('/workout')
 }
+// Checking a set off (or back on). Lives here rather than in the workout screen because the
+// mobile notification controls call it too, possibly with that screen unmounted — so it
+// reads the live session instead of one render's snapshot of it.
+export function toggleSet(idx, i) {
+  const A = S().active
+  if (!A || !A.entries[idx] || !A.entries[idx].sets[i]) return
+  const units = supersetUnits(A.entries)
+  const unit = unitOf(units, idx)
+  const isLastUnit = units.indexOf(unit) >= units.length - 1
+  const m = modeOf({ ...(A.entries[idx].target || {}), id: A.entries[idx].id })
+  let askTop = false, exJustDone = false, workoutDone = false
+  update(s => {
+    const e = s.active.entries[idx]
+    e.sets[i].done = !e.sets[i].done
+    if (e.sets[i].done) {
+      beep(snd(), 1040, 0.12); vibrate(30)
+      const isLastExInUnit = idx === unit[unit.length - 1]
+      const unitDone = unit.every(k => (k === idx ? e : A.entries[k]).sets.every(x => x.done))
+      if (isLastExInUnit && !unitDone) ui().startRest(S().restSec)
+      else if (unitDone) ui().stopRest()
+      if (unitDone && isLastUnit) workoutDone = true      // last exercise's last set → done
+      // Only reps training has a "working weight" worth confirming — a bodyweight plank
+      // has nothing to put in that slider.
+      if (e.sets.every(x => x.done)) { exJustDone = true; if (m === 'reps' && !e.asked) { e.asked = true; askTop = true } }
+    }
+  }, true)
+  // reps: topWeight first (it chains into the finish/continue prompt on the last unit).
+  // cardio/timed or already-confirmed: go straight to the prompt.
+  if (askTop) topWeightSheet(idx)
+  else if (workoutDone) workoutCompleteSheet()
+  else if (exJustDone && m === 'cardio') toast(t('Cardio logged'))
+  else if (exJustDone && m === 'time') toast(t('Hold logged'))
+}
 function TopWeight({ entryIdx, close }) {
   const st = useStore(s => s.S)
   const A = st.active

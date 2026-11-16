@@ -741,4 +741,6 @@ export default {
   'New to lifting': '웨이트 트레이닝 초보',
   'Coming back after a break': '쉬었다가 다시 시작',
   'Training regularly': '꾸준히 운동 중',
+  // workout notification (mobile): position inside the exercise, e.g. "Set 2/4"
+  'Set {0}': '세트 {0}',
 }

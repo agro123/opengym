@@ -741,4 +741,6 @@ export default {
   'New to lifting': 'Ağırlık antrenmanında yeniyim',
   'Coming back after a break': 'Aradan sonra geri dönüyorum',
   'Training regularly': 'Düzenli antrenman yapıyorum',
+  // workout notification (mobile): position inside the exercise, e.g. "Set 2/4"
+  'Set {0}': 'Set {0}',
 }

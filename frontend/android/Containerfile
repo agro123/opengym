@@ -1,0 +1,33 @@
+# Build environment for the Android APK — JDK 21, Node and the Android SDK, so the host
+# needs nothing but podman. Building the image accepts the Android SDK licenses.
+#
+#   podman build -t opengym-android -f frontend/android/Containerfile frontend/android
+#   podman run --rm -v "$PWD:/repo:Z" opengym-android   (from the repo root — the frontend imports from api/)
+#
+# The debug signing key is kept in frontend/android/.android-home, outside the container, so
+# every build is signed alike and installs over the last one.
+#
+# The debug APK lands in frontend/android/app/build/outputs/apk/debug/app-debug.apk.
+FROM docker.io/library/eclipse-temurin:21-jdk
+
+ENV ANDROID_HOME=/opt/android-sdk \
+    GRADLE_USER_HOME=/repo/frontend/android/.gradle-home \
+    ANDROID_USER_HOME=/repo/frontend/android/.android-home
+ENV PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$PATH
+
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# compileSdk 36, targetSdk 35 (android/variables.gradle)
+RUN mkdir -p $ANDROID_HOME/cmdline-tools \
+    && curl -fsSL -o /tmp/tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip \
+    && unzip -q /tmp/tools.zip -d $ANDROID_HOME/cmdline-tools \
+    && mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest \
+    && rm /tmp/tools.zip \
+    && yes | sdkmanager --licenses > /dev/null \
+    && sdkmanager "platform-tools" "platforms;android-35" "platforms;android-36" "build-tools;35.0.0"
+
+WORKDIR /repo/frontend
+CMD ["sh", "-c", "npm ci && npm run build:mobile && cd android && ./gradlew assembleDebug --no-daemon"]
