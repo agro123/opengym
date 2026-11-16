@@ -741,4 +741,6 @@ export default {
   'New to lifting': 'Новичок в силовых',
   'Coming back after a break': 'Возвращаюсь после перерыва',
   'Training regularly': 'Тренируюсь регулярно',
+  // workout notification (mobile): position inside the exercise, e.g. "Set 2/4"
+  'Set {0}': 'Подход {0}',
 }

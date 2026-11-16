@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Workout controls in the notification shade (Android app)
+
+- 🔔 **Train without unlocking the app.** While a workout runs, the Android app keeps an
+  ongoing notification for the next set: step its weight and reps (or seconds, duration,
+  speed — whatever that exercise logs) and tap Done. The rest that follows shows a live
+  countdown with −15s, +15s and Skip. Every tap lands in the same session the workout screen
+  edits, so the two never disagree, and it works with the app in the background. The phone
+  buzzes when a rest ends while you are elsewhere.
+
 ### The AI Coach
 
 openGym could always progress a plan. It could never *write* one, and it never looked at the

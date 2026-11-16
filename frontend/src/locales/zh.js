@@ -741,4 +741,6 @@ export default {
   'New to lifting': '刚接触力量训练',
   'Coming back after a break': '休息后重新开始',
   'Training regularly': '规律训练',
+  // workout notification (mobile): position inside the exercise, e.g. "Set 2/4"
+  'Set {0}': '第 {0} 组',
 }

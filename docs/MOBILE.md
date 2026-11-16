@@ -9,6 +9,7 @@ openGym ships in two flavors from the same codebase:
 | Data | synced to your server, readable on desktop | stays on the device (file in the app's private storage) |
 | Reminders | Web Push from your server | native local notifications, no server involved |
 | Exercise media | served by your server (`img/`, `gif/`) | loaded from the jsDelivr CDN |
+| Workout controls | in the app | also an ongoing notification on Android: adjust and check off the next set, −15s / +15s / Skip on the rest |
 
 The mobile flavor never talks to a backend: no sign-in screen, no sync, no telemetry.
 State is mirrored from `localStorage` into `opengym-state.json` in the app's private data
@@ -99,6 +100,12 @@ that would simply install. Your free options:
 - **License:** openGym is AGPL-3.0, which by itself sits badly with app-store terms of
   service. `NOTICE.md` carries an app-store exception (an additional permission under
   AGPL §7) granted by the copyright holder — relevant only if store distribution ever happens.
-- The app requests notification permission only when the workout-day reminder is switched
-  on, and (on Android) declares `SCHEDULE_EXACT_ALARM` so the reminder fires to the minute
-  where the user allows it.
+- The app requests notification permission when the workout-day reminder is switched on, or
+  (on Android) the first time a workout starts — the workout notification needs it. On Android
+  it declares `SCHEDULE_EXACT_ALARM` so the reminder fires to the minute where the user allows
+  it.
+- The Android workout notification is a `specialUse` foreground service (`WorkoutService`)
+  that runs only while a workout is in progress. It is what keeps the WebView alive so the
+  notification's buttons work in the background; `VIBRATE` and `WAKE_LOCK` are for the
+  rest-over buzz with the screen off. The web app stays the source of truth — see
+  `frontend/src/lib/workout-notif.js`.

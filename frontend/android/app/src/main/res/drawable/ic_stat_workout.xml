@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Status-bar icon of the workout notification: the app's dumbbell, as a flat silhouette. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7,11h10v2h-10zM4,7h2v10h-2zM18,7h2v10h-2zM1.5,9.5h2v5h-2zM20.5,9.5h2v5h-2z" />
+</vector>

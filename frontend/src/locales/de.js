@@ -759,4 +759,6 @@ export default {
   'New to lifting': 'Neu im Krafttraining',
   'Coming back after a break': 'Wiedereinstieg nach einer Pause',
   'Training regularly': 'Trainiere regelmäßig',
+  // workout notification (mobile): position inside the exercise, e.g. "Set 2/4"
+  'Set {0}': 'Satz {0}',
 }

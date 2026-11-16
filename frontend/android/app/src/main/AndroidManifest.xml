@@ -20,6 +20,18 @@
             </intent-filter>
         </activity>
 
+        <!-- The workout notification and its controls. A foreground service, so the buttons
+             still reach the app while it is in the background; it runs only during a workout. -->
+        <service
+            android:name=".WorkoutService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Controls and rest timer for the workout in progress" />
+        </service>
+        <receiver android:name=".WorkoutActionReceiver" android:exported="false" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -36,4 +48,13 @@
          on Android 12+. Where it isn't granted, scheduling silently falls back to inexact
          alarms — the reminder still arrives, just not to the minute. -->
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Workout notification: the service behind it, showing it (Android 13+), the buzz when a
+         rest ends, and staying awake for the length of that rest with the screen off. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Android 16+: lets the workout notification be a Live Update (status-bar chip, Now Bar) -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 </manifest>
