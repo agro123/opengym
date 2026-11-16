@@ -8,10 +8,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { api } from './api.js'
 import { DEMO } from './demo.js'
+import { MOBILE } from './mobile.js'
 import { useStore } from '../store/useStore.js'
 
 const POLL_MS = 3000        // a job is running: often enough to feel live
-const IDLE_MS = 60000       // a Coach screen is open but nothing is running
+const IDLE_MS = MOBILE ? 5000 : 60000   // a Coach screen is open but nothing is running (free on the phone)
 
 // The demo build has no backend, so it answers these locally with a canned proposal built
 // from its own seeded profile (lib/coach-demo.js). Everything downstream — validation,
@@ -21,13 +22,18 @@ let demoMod = null
 const demo = async () => (demoMod = demoMod || await import('./coach-demo.js'))
 const S = () => useStore.getState().S
 
-export const coachStatus = async () => DEMO ? (await demo()).demoStatus() : api('/api/coach/status')
-export const requestReview = async note => DEMO ? (await demo()).demoReview(S()) : api('/api/coach/review', { method: 'POST', body: JSON.stringify({ note: note || '' }) })
-export const requestPlan = async intake => DEMO ? (await demo()).demoPlan(S(), intake) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ intake }) })
-export const refinePlan = async text => DEMO ? (await demo()).demoRefine(S()) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ refine: text }) })
-export const resolvePending = async body => DEMO ? (await demo()).demoResolve() : api('/api/coach/pending/resolve', { method: 'POST', body: JSON.stringify(body) })
-export const forgetCoach = async () => DEMO ? (await demo()).demoResolve() : api('/api/coach/forget', { method: 'POST', body: '{}' })
-export const disclosure = async () => DEMO ? (await demo()).demoDisclosure() : api('/api/coach/disclosure')
+// The mobile build has no backend either, but its Coach is real: lib/coach-gemini.js runs the
+// same job on the phone against the owner's own Gemini key.
+let localMod = null
+const local = async () => (localMod = localMod || await import('./coach-gemini.js'))
+
+export const coachStatus = async () => MOBILE ? (await local()).localStatus() : DEMO ? (await demo()).demoStatus() : api('/api/coach/status')
+export const requestReview = async note => MOBILE ? (await local()).localReview(S(), note) : DEMO ? (await demo()).demoReview(S()) : api('/api/coach/review', { method: 'POST', body: JSON.stringify({ note: note || '' }) })
+export const requestPlan = async intake => MOBILE ? (await local()).localPlan(S(), intake) : DEMO ? (await demo()).demoPlan(S(), intake) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ intake }) })
+export const refinePlan = async text => MOBILE ? (await local()).localRefine(S(), text) : DEMO ? (await demo()).demoRefine(S()) : api('/api/coach/plan', { method: 'POST', body: JSON.stringify({ refine: text }) })
+export const resolvePending = async body => MOBILE ? (await local()).localResolve() : DEMO ? (await demo()).demoResolve() : api('/api/coach/pending/resolve', { method: 'POST', body: JSON.stringify(body) })
+export const forgetCoach = async () => MOBILE ? (await local()).localResolve() : DEMO ? (await demo()).demoResolve() : api('/api/coach/forget', { method: 'POST', body: '{}' })
+export const disclosure = async () => MOBILE ? (await local()).localDisclosure() : DEMO ? (await demo()).demoDisclosure() : api('/api/coach/disclosure')
 
 /**
  * Live job/proposal state.

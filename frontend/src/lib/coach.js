@@ -39,9 +39,10 @@ const coachOf = s => (s.coach = s.coach || emptyCoach())
 // The demo build is the one exception, and it is deliberate: it has no backend and no
 // account, but it does have a canned provider (lib/coach-demo.js), and hiding the app's most
 // interesting feature from the page people are sent to look at it on would be a strange
-// choice. The mobile build stays out — there is no server there to fake anything with.
+// choice. The mobile build has no server either, and is in for a different reason: it runs a
+// real Coach on the phone against the owner's own Gemini key (lib/coach-gemini.js).
 export const coachAvailable = (config, user, { demo, mobile } = {}) =>
-  mobile ? false : demo ? true : !!(config?.coach?.enabled && user)
+  mobile ? true : demo ? true : !!(config?.coach?.enabled && user)
 export const hasConsent = S => !!S?.coach?.consent?.agreedAt && S.coach.consent.version === CONSENT_VERSION
 
 /* ============================ plan fingerprint ============================ */

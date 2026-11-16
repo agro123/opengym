@@ -10,6 +10,7 @@ data/
 
 # Build output / deps
 frontend/dist/
+frontend/.media-cache/
 node_modules/
 *.log
 .DS_Store
