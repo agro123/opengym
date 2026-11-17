@@ -38,9 +38,15 @@ const SYSTEM_PROMPT = [
 const read = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) || d } catch { return d } }
 const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch { /* storage unavailable */ } }
 
-export const geminiSettings = () => ({ key: '', model: DEFAULT_MODEL, ...read(SETTINGS, {}) })
+// `visionModel` is the model the food scanner sends photos to (lib/food-ai.js). Empty means
+// "the Coach's model" — every current Gemini model reads images — so there is one key and one
+// provider, and a second model only if the owner names one.
+export const geminiSettings = () => ({ key: '', model: DEFAULT_MODEL, visionModel: '', ...read(SETTINGS, {}) })
 export function saveGeminiSettings({ key, model }) {
-  write(SETTINGS, { key: String(key || '').trim(), model: String(model || '').trim() || DEFAULT_MODEL })
+  write(SETTINGS, { ...read(SETTINGS, {}), key: String(key || '').trim(), model: String(model || '').trim() || DEFAULT_MODEL })
+}
+export function saveVisionModel(model) {
+  write(SETTINGS, { ...read(SETTINGS, {}), visionModel: String(model || '').trim() })
 }
 
 let job = null
@@ -65,8 +71,15 @@ export function buildPrompt(kind, payload, repair) {
   return out
 }
 
-/** One generateContent round-trip. Resolves to { text } or { errorClass, detail }. */
-export async function callGemini(prompt, { key, model }, timeoutMs = TIMEOUT_MS) {
+/**
+ * One generateContent round-trip. Resolves to { text } or { errorClass, detail }.
+ *
+ * `extra` is what the food scanner adds to the Coach's plain text call: `images`
+ * ([{ mime, data }], base64) ride along as inline parts, `schema` asks for structured output
+ * against a response schema, and `system` replaces the Coach's system prompt. Left out, the
+ * request is byte for byte what the Coach has always sent.
+ */
+export async function callGemini(prompt, { key, model }, timeoutMs = TIMEOUT_MS, extra = {}) {
   if (!key) return { errorClass: 'auth', detail: 'no Gemini API key set' }
   const ctl = new AbortController()
   const timer = setTimeout(() => ctl.abort(), timeoutMs)
@@ -76,9 +89,12 @@ export async function callGemini(prompt, { key, model }, timeoutMs = TIMEOUT_MS)
       signal: ctl.signal,
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { responseMimeType: 'application/json' }
+        systemInstruction: { parts: [{ text: extra.system || SYSTEM_PROMPT }] },
+        contents: [{ role: 'user', parts: [
+          { text: prompt },
+          ...(extra.images || []).map(i => ({ inlineData: { mimeType: i.mime, data: i.data } }))
+        ] }],
+        generationConfig: { responseMimeType: 'application/json', ...(extra.schema ? { responseSchema: extra.schema } : {}) }
       })
     })
     const body = await res.json().catch(() => ({}))

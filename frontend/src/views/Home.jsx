@@ -13,6 +13,7 @@ import { coachAvailable, hasConsent } from '../lib/coach.js'
 import { useCoachStatus } from '../lib/coach-api.js'
 import { DEMO } from '../lib/demo.js'
 import { MOBILE } from '../lib/mobile.js'
+import { nutritionOf, goalsOf, dayTotals } from '../lib/nutrition.js'
 
 // A job in flight or a proposal waiting is the only reason the Coach interrupts Home. When it
 // has nothing to say it renders nothing at all — and it only polls while Home is on screen.
@@ -36,6 +37,26 @@ function CoachCard({ nav }) {
       </div>
       {ready ? <span className="tag acc">{t('Review')}</span> : <Icon name="chevronRight" className="chev" />}
     </div>
+  </div>
+}
+
+// Today's food at a glance, and the way into the nutrition screens.
+function NutritionCard({ nav }) {
+  const S = useStore(s => s.S)
+  const total = dayTotals(S, todayISO()), goals = goalsOf(S)
+  const waiting = nutritionOf(S).pending.filter(p => p.status === 'review').length
+  return <div className="card tappable" style={{ cursor: 'pointer' }} onClick={() => nav('/nutrition')}>
+    <div className="row between">
+      <div className="row" style={{ gap: 9, minWidth: 0 }}>
+        <span className="lrow-i" style={{ '--tint': 'var(--orange)' }}><Icon name="fork" /></span>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 500 }}>{t('Nutrition')}</div>
+          <div className="muted small">{Math.round(total.kcal)} / {goals.kcal} kcal · {t('Protein')} {fmtNum(total.protein)} g</div>
+        </div>
+      </div>
+      {waiting ? <span className="tag acc">{t('Review')}</span> : <Icon name="chevronRight" className="chev" />}
+    </div>
+    <div className="kcal-t" style={{ height: 6 }}><i style={{ width: Math.min(100, total.kcal / Math.max(1, goals.kcal) * 100) + '%' }} /></div>
   </div>
 }
 
@@ -106,6 +127,7 @@ export default function Home() {
     </div>
 
     {coachOn && <CoachCard nav={nav} />}
+    <NutritionCard nav={nav} />
 
     {!S.routines.length && !S.active && (
       <div className="card">

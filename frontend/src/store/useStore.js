@@ -4,6 +4,7 @@ import { localTZ } from '../lib/format.js'
 import { registerCustom } from '../lib/exercises.js'
 import { DEMO, DEMO_SEEDED } from '../lib/demo.js'
 import { MOBILE, nativeLoad, nativeSave, syncReminder } from '../lib/mobile.js'
+import { recoverPending } from '../lib/nutrition.js'
 
 const KEY = 'gym_state_v1'
 export const DEF = {
@@ -19,7 +20,11 @@ export const DEF = {
   // AI Coach (issue: AI enablement). null until the profile opts in — a null namespace is the
   // same app it was before the feature existed, which is what Epic F asks for. Shape and
   // bounds live in lib/coach.js.
-  coach: null
+  coach: null,
+  // Nutrition (food log, goals, the photo-analysis queue). null until something is logged —
+  // lib/nutrition.js reads it through nutritionOf(), which fills in whatever an older state
+  // or backup does not have. Photos themselves are files, never part of this object.
+  nutrition: null
 }
 const clone = o => JSON.parse(JSON.stringify(o))
 
@@ -155,6 +160,13 @@ export const useStore = create((set, get) => {
 
     // Boot: ask the server who we are, then pull.
     async boot() {
+      // A food analysis that was running when the app last died is not running now: back to
+      // the queue it goes, to be started again by hand (lib/nutrition.js recoverPending).
+      const ready = () => {
+        const S = clone(get().S)
+        if (recoverPending(S)) persist(S)
+        set({ ready: true })
+      }
       // Mobile build: no backend either — restore from the file mirror (the durable copy;
       // localStorage may have been evicted since the last run) and go straight in.
       if (MOBILE) {
@@ -167,7 +179,7 @@ export const useStore = create((set, get) => {
         }
         get().setGuest(true)
         syncReminder(get().S)
-        set({ ready: true })
+        ready()
         return
       }
       // Demo build (GitHub Pages): no backend at all — seed once, stay in guest mode.
@@ -177,7 +189,7 @@ export const useStore = create((set, get) => {
           await get().resetDemo()
         }
         get().setGuest(true)
-        set({ ready: true })
+        ready()
         return
       }
       // Instance capabilities are public and needed whether or not anyone is signed in.
@@ -195,7 +207,7 @@ export const useStore = create((set, get) => {
       } catch (e) {
         if (e.status === 401) get().setUser(null)
       }
-      set({ ready: true })
+      ready()
     }
   }
 })

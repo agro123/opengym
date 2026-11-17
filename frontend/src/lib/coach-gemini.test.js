@@ -83,4 +83,20 @@ describe('Gemini Coach on the phone', () => {
     expect(r.errorClass).toBe('auth')
     expect(fetch).not.toHaveBeenCalled()
   })
+
+  // The food scanner (lib/food-ai.js) reuses this client rather than bringing its own.
+  it('carries photos and a response schema when asked, and nothing extra when not', async () => {
+    fetch.mockResolvedValue(answer('{}'))
+    await callGemini('plate', settings, 1000, { images: [{ mime: 'image/jpeg', data: 'QUJD' }], schema: { type: 'OBJECT' }, system: 'food' })
+    const sent = JSON.parse(fetch.mock.calls[0][1].body)
+    expect(sent.contents[0].parts).toEqual([{ text: 'plate' }, { inlineData: { mimeType: 'image/jpeg', data: 'QUJD' } }])
+    expect(sent.generationConfig).toEqual({ responseMimeType: 'application/json', responseSchema: { type: 'OBJECT' } })
+    expect(sent.systemInstruction.parts[0].text).toBe('food')
+
+    await callGemini('hi', settings)
+    const plain = JSON.parse(fetch.mock.calls[1][1].body)
+    expect(plain.contents[0].parts).toEqual([{ text: 'hi' }])
+    expect(plain.generationConfig).toEqual({ responseMimeType: 'application/json' })
+    expect(plain.systemInstruction.parts[0].text).toMatch(/openGym Coach/)
+  })
 })

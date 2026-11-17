@@ -37,6 +37,15 @@ export const DATA_CATEGORIES = [
   'prefs'        // unit, language, effort scale
 ];
 
+// Nutrition is not part of the consent above: it is a separate switch (Nutrition settings →
+// "Let the Coach read your nutrition"), off by default, and the block below is only built
+// when it is on. Listed here so the two places that describe it cannot drift apart.
+export const OPTIONAL_CATEGORIES = [
+  'nutrition'    // calorie/macro goals, daily totals for NUTRITION_DAYS, the last NUTRITION_MEALS meals — never photos
+];
+export const NUTRITION_DAYS = 14;
+export const NUTRITION_MEALS = 10;
+
 /** Stable per-profile pseudonym. Never the uid, never reversible, same across jobs. */
 function handle(uid) {
   const secret = fs.readFileSync(path.join(DATA, 'secret'), 'utf8').trim();
@@ -203,6 +212,46 @@ function aggregates(S, workouts) {
   };
 }
 
+/* ---------- nutrition, read-only (the food log lives in frontend/src/lib/nutrition.js) ----------
+   The same allowlist discipline as everything else here: totals and names are copied in by
+   field, so item-level detail, photo ids, analysis notes and whatever the food log grows
+   next stay on the device. The Coach gets enough to answer "am I eating enough protein?" —
+   and nothing it could change: there is no change type that touches the food log. */
+const macros4 = m => ({
+  kcal: Math.round(Number(m?.kcal) || 0),
+  protein: Math.round((Number(m?.protein) || 0) * 10) / 10,
+  carbs: Math.round((Number(m?.carbs) || 0) * 10) / 10,
+  fat: Math.round((Number(m?.fat) || 0) * 10) / 10
+});
+export function nutritionSummary(S, today = iso(new Date())) {
+  const n = S && S.nutrition;
+  if (!n || !n.prefs?.coach || !Array.isArray(n.meals)) return null;
+  const fromDate = new Date(today + 'T12:00:00Z'); fromDate.setUTCDate(fromDate.getUTCDate() - (NUTRITION_DAYS - 1));
+  const from = iso(fromDate);
+  const meals = n.meals.filter(m => m && typeof m.d === 'string' && m.totalMacros);
+  const byDay = new Map();
+  meals.filter(m => m.d >= from).forEach(m => {
+    const d = byDay.get(m.d) || { d: m.d, meals: 0, kcal: 0, protein: 0, carbs: 0, fat: 0 };
+    const t = macros4(m.totalMacros);
+    d.meals++; d.kcal += t.kcal; d.protein += t.protein; d.carbs += t.carbs; d.fat += t.fat;
+    byDay.set(m.d, d);
+  });
+  const days = [...byDay.values()].sort((a, b) => (a.d < b.d ? -1 : 1)).map(d => ({ d: d.d, meals: d.meals, ...macros4(d) }));
+  const avg = k => (days.length ? days.reduce((sum, d) => sum + d[k], 0) / days.length : 0);
+  return {
+    goals: n.goals ? macros4(n.goals) : null,
+    // only days with something logged — an empty day is a day not logged, not a day of fasting
+    days,
+    average: days.length ? macros4({ kcal: avg('kcal'), protein: avg('protein'), carbs: avg('carbs'), fat: avg('fat') }) : null,
+    recentMeals: meals.slice(-NUTRITION_MEALS).map(m => ({
+      d: m.d,
+      type: ['breakfast', 'lunch', 'dinner', 'snack'].includes(m.mealType) ? m.mealType : null,
+      name: String(m.name || '').slice(0, 80),
+      ...macros4(m.totalMacros)
+    }))
+  };
+}
+
 /** One workout, reduced to what a coach reads. */
 function cleanWorkout(w) {
   return {
@@ -286,6 +335,8 @@ export function build(S, uid, opts = {}) {
       series: (S.bodyweight || []).filter(b => !p.window.from || b.d >= p.window.from).map(b => ({ d: b.d, w: b.w }))
     };
     if (opts.note) p.userNote = String(opts.note).slice(0, 1000);
+    const nutrition = nutritionSummary(S, p.meta.today);
+    if (nutrition) p.nutrition = nutrition;
     p.library = librarySlice(S, profile?.equipment);
   } else {
     p.library = librarySlice(S, profile?.equipment);

@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+### Nutrition and the food scanner
+
+- 🍽️ **A food log, on the device.** Calories and macros for the day against goals you set,
+  meals by type, a seven-day view, history with search, favorite meals and the foods you log
+  most. Entering, editing and re-logging meals all work offline.
+- 📷 **Photograph a meal, get its parts.** In the mobile app, up to four photos of a plate go to
+  Gemini — through the Coach's own client and key, no second integration — and come back as
+  separate components with estimated weights: a bandeja paisa is rice, beans, chicharrón, egg…
+  not one label. Every weight is marked as an estimate, low-confidence items are called out,
+  and nothing is logged until you have checked it and tapped Save.
+- 📏 **Help it measure.** Optional and remembered: the plate or bowl the food is on (measured
+  once in *My plates and bowls*), or a card or fork in the shot as a ruler; a guided second
+  photo from the side for height; and anything you weighed, which is used exactly instead of
+  estimated.
+- ✏️ **Correct it without the model.** Quantity, unit, grams, raw or cooked, values per 100 g,
+  added oil or sauce: every edit recalculates on the phone. A food listed both inside a dish
+  and beside it is counted once.
+- 📴 **Offline queue, by consent.** Photos taken without a connection can be kept for later;
+  they are never sent until you start the analysis yourself.
+- 🤝 **The Coach can read it, if you say so.** A switch in Nutrition settings adds your goals
+  and daily totals to a review. Read-only — the Coach cannot change your food log.
+
+See [docs/NUTRITION.md](docs/NUTRITION.md).
+
 ### Workout controls in the notification shade (Android app)
 
 - 🔔 **Train without unlocking the app.** While a workout runs, the Android app keeps an

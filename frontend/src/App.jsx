@@ -27,6 +27,14 @@ import Admin from './views/Admin.jsx'
 import Coach from './views/Coach.jsx'
 import CoachIntake from './views/CoachIntake.jsx'
 import CoachProposal from './views/CoachProposal.jsx'
+import Nutrition from './views/Nutrition.jsx'
+import FoodScanner from './views/FoodScanner.jsx'
+import FoodAnalysisResults from './views/FoodAnalysisResults.jsx'
+import PortionEditor from './views/PortionEditor.jsx'
+import MealDetails from './views/MealDetails.jsx'
+import FoodHistory from './views/FoodHistory.jsx'
+import NutritionGoals from './views/NutritionGoals.jsx'
+import NutritionSettings from './views/NutritionSettings.jsx'
 
 bindUI(useUI)   // lets the shared controls open sheets without importing the store at module scope
 
@@ -84,6 +92,15 @@ function Shell() {
               <Route path="/coach" element={<Coach />} />
               <Route path="/coach/intake" element={<CoachIntake />} />
               <Route path="/coach/proposal" element={<CoachProposal />} />
+              <Route path="/nutrition" element={<Nutrition />} />
+              <Route path="/nutrition/scan" element={<FoodScanner />} />
+              <Route path="/nutrition/scan/:id" element={<FoodScanner />} />
+              <Route path="/nutrition/review/:id" element={<FoodAnalysisResults />} />
+              <Route path="/nutrition/edit/:kind/:id" element={<PortionEditor />} />
+              <Route path="/nutrition/meal/:id" element={<MealDetails />} />
+              <Route path="/nutrition/history" element={<FoodHistory />} />
+              <Route path="/nutrition/goals" element={<NutritionGoals />} />
+              <Route path="/nutrition/settings" element={<NutritionSettings />} />
               <Route path="/admin" element={user?.admin ? <Admin /> : <Navigate to="/home" replace />} />
               <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>

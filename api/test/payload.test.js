@@ -116,3 +116,44 @@ test('declined changes are carried forward so the Coach does not nag', () => {
   assert.equal(p.previouslyDeclined.length, 1);
   assert.equal(p.previouslyDeclined[0].type, 'sets');
 });
+
+/* The food log reaches the Coach only behind its own switch, and only as totals. */
+const foodLog = coach => ({
+  goals: { kcal: 2200, protein: 140, carbs: 240, fat: 70, somethingElse: 'x' },
+  prefs: { coach, keepPhotos: true, disclosedAt: 123 },
+  pending: [{ id: 'p1', photoIds: ['photo-secret-1'], note: 'private note' }],
+  meals: [
+    { id: 'm1', d: payload_today(-1), mealType: 'lunch', name: 'Bandeja paisa', photoIds: ['photo-secret-2'], requestId: 'fa-abc',
+      totalMacros: { kcal: 1200.4, protein: 55.26, carbs: 110, fat: 60, sodium: 1800 },
+      items: [{ name: 'chicharrón', note: 'hidden frying oil', macrosPer100g: { kcal: 540 } }], uncertainties: ['could not see under the rice'] },
+    { id: 'm2', d: payload_today(-1), mealType: 'dinner', name: 'Arepa con queso', totalMacros: { kcal: 400, protein: 15, carbs: 45, fat: 16 }, items: [] },
+    { id: 'm3', d: payload_today(-40), mealType: 'snack', name: 'Old snack', totalMacros: { kcal: 100, protein: 1, carbs: 20, fat: 2 }, items: [] }
+  ]
+});
+function payload_today(offset) { const d = new Date(); d.setUTCDate(d.getUTCDate() + offset); return d.toISOString().slice(0, 10); }
+
+test('nutrition stays out of the payload until its own switch is on', () => {
+  const off = payload.build(sampleState({ nutrition: foodLog(false) }), 'u1', { kind: 'review' });
+  assert.equal(off.nutrition, undefined);
+  assert.ok(!JSON.stringify(off).includes('Bandeja'), 'no meal may leak with the switch off');
+  assert.equal(payload.build(sampleState(), 'u1', { kind: 'review' }).nutrition, undefined, 'a profile with no food log');
+});
+
+test('with the switch on, the Coach gets totals and names — not photos, items or notes', () => {
+  const p = payload.build(sampleState({ nutrition: foodLog(true) }), 'u1', { kind: 'review' });
+  assert.deepEqual(p.nutrition.goals, { kcal: 2200, protein: 140, carbs: 240, fat: 70 });
+  assert.equal(p.nutrition.days.length, 1, 'only days inside the window, one row per day');
+  assert.deepEqual(p.nutrition.days[0], { d: payload_today(-1), meals: 2, kcal: 1600, protein: 70.3, carbs: 155, fat: 76 });
+  assert.deepEqual(p.nutrition.average, { kcal: 1600, protein: 70.3, carbs: 155, fat: 76 });
+  assert.deepEqual(Object.keys(p.nutrition.recentMeals[0]).sort(), ['carbs', 'd', 'fat', 'kcal', 'name', 'protein', 'type']);
+  assert.equal(p.nutrition.recentMeals.length, 3);
+  const json = JSON.stringify(p.nutrition);
+  for (const forbidden of ['photo-secret', 'private note', 'fa-abc', 'chicharrón', 'hidden frying oil', 'under the rice', 'sodium', 'somethingElse', 'disclosedAt']) {
+    assert.ok(!json.includes(forbidden), `nutrition block leaked ${forbidden}`);
+  }
+});
+
+test('nutrition is review context only — a plan request never carries it', () => {
+  const p = payload.build(sampleState({ nutrition: foodLog(true) }), 'u1', { kind: 'create' });
+  assert.equal(p.nutrition, undefined);
+});

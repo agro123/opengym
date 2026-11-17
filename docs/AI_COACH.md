@@ -129,6 +129,12 @@ A review reads a training block, not a training career: the window is capped at 
 sessions**. Your profile is identified by a stable pseudonym that is never the user id and never
 reversible.
 
+A sixth category is opt-in and separate from the consent above: with *Let the Coach read your
+nutrition* switched on in Nutrition settings, a review also carries `nutrition` — calorie and
+macro goals, daily totals for the last 14 days and the names and macros of the last 10 meals.
+Never photos or item-level detail, and the Coach has no way to change the food log. See
+[NUTRITION.md](NUTRITION.md).
+
 Excluded on purpose and permanently: **display name and user id, passkey and credential
 material, push subscriptions, invite data, theme and appearance settings, and every other
 profile's everything.** Only the math and the effort leave the box.
